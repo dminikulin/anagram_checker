@@ -1,4 +1,6 @@
+import classNames from "classnames";
 import React, { useCallback, useMemo, useState } from "react";
+import {filterChars, validateAnagram, extraCharPresent } from "./utils";
 
 export default function App() {
   const [sentenceInput, setSentenceInput] = useState("");
@@ -10,23 +12,6 @@ export default function App() {
   const [error, setError] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [allowRepeats, setAllowRepeats] = useState(false);
-
-  const filterChars = useCallback((str: string) => {
-    return str
-      .toLowerCase()
-      .split("")
-      .filter((ch) => {
-        /[a-zA-Z0-9 ]/.test(ch);
-      });
-  }, []);
-
-  const countChars = (chars: string[]) => {
-    const counts: { [ch: string]: number } = {};
-    for (const ch of chars) {
-      counts[ch] = (counts[ch] || 0) + 1;
-    }
-    return counts;
-  };
 
   const submitSentence = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -69,74 +54,19 @@ export default function App() {
     setAllowRepeats(!allowRepeats);
   };
 
-  const hasMinRequiredChars = useCallback(() => {
-    const originalCounts = countChars(filterChars(originalSentence));
-    const anagramCounts = countChars(filterChars(anagram));
-
-    for (const ch of Object.keys(originalCounts)) {
-      if ((anagramCounts[ch] || 0) < originalCounts[ch]) {
-        return false;
-      }
-    }
-
-    return true;
-  }, [anagram, originalSentence, filterChars]);
-
-  const extraCharPresent = useCallback(() => {
-    const originalCounts = countChars(filterChars(originalSentence));
-    const anagramChars = filterChars(anagram);
-    const anagramCounts = countChars(anagramChars);
-
-    if (!allowRepeats) {
-      for (const ch of Object.keys(anagramCounts)) {
-        if ((anagramCounts[ch] || 0) > (originalCounts[ch] || 0)) {
-          return true;
-        }
-      }
-    } else {
-      for (const ch of Object.keys(anagramCounts)) {
-        if ((originalCounts[ch] || 0) === 0) {
-          return true;
-        }
-      }
-    }
-
-    return false;
-  }, [anagram, originalSentence, filterChars, allowRepeats]);
-
   const createdAnagram = useCallback(() => {
-    const normalizedAnagram = anagram.toLowerCase().replace(/\s/g, "");
-    const normalizedOriginal = originalSentence
-      .toLowerCase()
-      .replace(/\s/g, "");
-
-    const isNotSameWord = normalizedAnagram !== normalizedOriginal;
-    const hasRequiredLength = !allowRepeats
-      ? normalizedAnagram.length === normalizedOriginal.length
-      : normalizedAnagram.length >= normalizedOriginal.length;
-
-    if (
-      !isNotSameWord ||
-      !hasRequiredLength ||
-      !hasMinRequiredChars() ||
-      extraCharPresent()
-    ) {
-      return false;
-    }
-
-    return true;
-  }, [
-    anagram,
-    originalSentence,
-    extraCharPresent,
-    hasMinRequiredChars,
-    allowRepeats,
-  ]);
+    return validateAnagram(
+      originalSentence,
+      anagram,
+      allowRepeats,
+      filterChars,
+    );
+  }, [originalSentence, anagram, allowRepeats]);
 
   const highlightUsedChars = useMemo(() => {
     if (!originalSentenceChars.length) return null;
 
-    const typedLower = anagram.toLowerCase();
+    const typedLower = filterChars(anagram).join("");
     const typedCounts: { [ch: string]: number } = {};
 
     for (const ch of typedLower) {
@@ -157,7 +87,10 @@ export default function App() {
       }
 
       return (
-        <span key={idx} className={`${shouldHighlight && "text-stone-400"}`}>
+        <span
+          key={idx}
+          className={classNames({ "text-stone-400": shouldHighlight })}
+        >
           {ch}
         </span>
       );
@@ -177,7 +110,7 @@ export default function App() {
           >
             <h2 className="mb-2 text-center text-3xl">Enter your sentence</h2>
             <input
-              className={`ease-in-out" my-1 h-8 rounded-full border bg-zinc-50 px-3 shadow-md shadow-zinc-200 duration-300 placeholder:text-zinc-500 hover:border-zinc-500 hover:bg-zinc-100 ${error ? "border-red-700" : "border-zinc-700"}`}
+              className={`my-1 h-8 rounded-full border bg-zinc-50 px-3 shadow-md shadow-zinc-200 duration-300 ease-in-out placeholder:text-zinc-500 hover:border-zinc-500 hover:bg-zinc-100 ${error ? "border-red-700" : "border-zinc-700"}`}
               type="text"
               name="sentence"
               id="sentence_input"
@@ -188,7 +121,7 @@ export default function App() {
             {error && <p className="text-red-500">Sentence is empty</p>}
             <button
               type="submit"
-              className="button my-2 rounded-full bg-zinc-800 px-5 py-2 text-zinc-50 duration-300 ease-in-out hover:bg-zinc-600"
+              className="my-2 rounded-full bg-zinc-800 px-5 py-2 text-zinc-50 duration-300 ease-in-out hover:bg-zinc-600"
             >
               Enter
             </button>
@@ -203,6 +136,7 @@ export default function App() {
               type="text"
               name="anagram"
               placeholder="Your anagram here..."
+              value={anagram}
               onChange={(e) => setAnagram(e.target.value)}
             />
             <div className="flex flex-row justify-center gap-2">
@@ -216,7 +150,7 @@ export default function App() {
             </div>
             <div className="flex flex-col items-center justify-center">
               <p className="mb-2 text-xl">{highlightUsedChars}</p>
-              {extraCharPresent() && (
+              {extraCharPresent(originalSentence, anagram, allowRepeats) && (
                 <p className="text-sm text-red-500">Extra characters found!</p>
               )}
               {createdAnagram() && (
@@ -225,7 +159,7 @@ export default function App() {
                 </p>
               )}
               <button
-                className="button my-4 rounded-full bg-zinc-800 px-5 py-2 text-zinc-50 duration-300 ease-in-out hover:bg-zinc-600"
+                className="my-4 rounded-full bg-zinc-800 px-5 py-2 text-zinc-50 duration-300 ease-in-out hover:bg-zinc-600"
                 onClick={resetOriginalSentence}
               >
                 Reset
@@ -234,12 +168,12 @@ export default function App() {
           </div>
         )}
       </div>
-      <div className="flex px-10 my-20 items-center justify-center">
+      <div className="my-20 flex items-center justify-center px-10">
         <div className="flex max-w-2xl min-w-xs flex-col items-center">
           <h2 className="mb-4 text-center text-3xl font-semibold">
             How to use:
           </h2>
-          <ol className="list-decimal list-inside text-justify">
+          <ol className="list-inside list-decimal text-justify">
             <li>
               Enter your original sentence. This will be the basis of your
               anagram.
