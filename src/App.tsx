@@ -1,6 +1,6 @@
 import classNames from "classnames";
 import React, { useCallback, useMemo, useState } from "react";
-import {filterChars, validateAnagram, extraCharPresent } from "./utils";
+import { filterChars, validateAnagram, extraCharPresent } from "./utils";
 
 export default function App() {
   const [sentenceInput, setSentenceInput] = useState("");
@@ -9,14 +9,20 @@ export default function App() {
     [],
   );
   const [anagram, setAnagram] = useState("");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(true);
   const [allowRepeats, setAllowRepeats] = useState(false);
 
   const submitSentence = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (sentenceInput === "") {
-      setError(true);
+    if (sentenceInput.length < 4) {
+      setError("Sentence must be at least 4 characters long");
+      return;
+    }
+
+    const inputChars = new Set(sentenceInput);
+    if (inputChars.size < 3) {
+      setError("Sentence must have at least 3 unique characters");
       return;
     }
 
@@ -31,7 +37,7 @@ export default function App() {
         });
       });
     }, 300);
-    setError(false);
+    setError(null);
   };
 
   const resetOriginalSentence = () => {
@@ -51,7 +57,7 @@ export default function App() {
   };
 
   const toggleStrictCheck = () => {
-    setAllowRepeats(!allowRepeats);
+    setAllowRepeats((previous) => !previous);
   };
 
   const createdAnagram = useCallback(() => {
@@ -118,7 +124,9 @@ export default function App() {
               value={sentenceInput}
               onChange={(e) => setSentenceInput(e.target.value)}
             />
-            {error && <p className="text-red-500">Sentence is empty</p>}
+            {error && (
+              <p className="text-center text-sm text-red-500">{error}</p>
+            )}
             <button
               type="submit"
               className="my-2 rounded-full bg-zinc-800 px-5 py-2 text-zinc-50 duration-300 ease-in-out hover:bg-zinc-600"
@@ -186,8 +194,9 @@ export default function App() {
             </li>
             <li>
               If you want to have repeating characters in your sentence, click
-              "Allow repeats". This way, the characters from your original
-              sentence can appear in the anagram more than once.
+              <span className="font-bold"> "Allow repeats"</span>. This way, the
+              characters from your original sentence can appear in the anagram
+              more than once.
             </li>
             <li>
               The characters not present in original sentence{" "}
