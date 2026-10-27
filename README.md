@@ -1,6 +1,6 @@
 # Check your anagram!
 
-Little program for anagram checking, written with React + TS + Tailwind.
+Little program for anagram checking, written with React + TS + Tailwind. [Test here!](https://dminikulin.github.io/anagram_checker/)
 
 How to use:
 
